@@ -7,7 +7,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/sources.cmake)
 add_library(sevenzip SHARED ${SZ_SOURCES})
 target_include_directories(sevenzip PRIVATE ${SZ}/C ${SZ}/CPP ${SZ}/CPP/7zip/Bundles/Format7zF)
 target_compile_definitions(sevenzip PRIVATE
-    Z7_EXTERNAL_CODECS _REENTRANT _FILE_OFFSET_BITS=64 _LARGEFILE_SOURCE NDEBUG)
+    _REENTRANT _FILE_OFFSET_BITS=64 _LARGEFILE_SOURCE NDEBUG)
 target_compile_options(sevenzip PRIVATE -O2 -fPIC)
 if(ANDROID_ABI STREQUAL "arm64-v8a")
     target_compile_options(sevenzip PRIVATE -march=armv8-a+crypto+crc)

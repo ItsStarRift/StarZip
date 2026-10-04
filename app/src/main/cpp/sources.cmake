@@ -69,7 +69,6 @@ set(SZ_SOURCES
     ${SZ}/CPP/7zip/Archive/ApfsHandler.cpp
     ${SZ}/CPP/7zip/Archive/ApmHandler.cpp
     ${SZ}/CPP/7zip/Archive/ArHandler.cpp
-    ${SZ}/CPP/7zip/Archive/ArchiveExports.cpp
     ${SZ}/CPP/7zip/Archive/ArjHandler.cpp
     ${SZ}/CPP/7zip/Archive/Base64Handler.cpp
     ${SZ}/CPP/7zip/Archive/Bz2Handler.cpp
@@ -94,7 +93,6 @@ set(SZ_SOURCES
     ${SZ}/CPP/7zip/Archive/CpioHandler.cpp
     ${SZ}/CPP/7zip/Archive/CramfsHandler.cpp
     ${SZ}/CPP/7zip/Archive/DeflateProps.cpp
-    ${SZ}/CPP/7zip/Archive/DllExports2.cpp
     ${SZ}/CPP/7zip/Archive/DmgHandler.cpp
     ${SZ}/CPP/7zip/Archive/ElfHandler.cpp
     ${SZ}/CPP/7zip/Archive/ExtHandler.cpp
@@ -163,6 +161,8 @@ set(SZ_SOURCES
     ${SZ}/CPP/7zip/Archive/ZstdHandler.cpp
     ${SZ}/CPP/7zip/Common/CWrappers.cpp
     ${SZ}/CPP/7zip/Common/CreateCoder.cpp
+    ${SZ}/CPP/7zip/Common/FilePathAutoRename.cpp
+    ${SZ}/CPP/7zip/Common/FileStreams.cpp
     ${SZ}/CPP/7zip/Common/FilterCoder.cpp
     ${SZ}/CPP/7zip/Common/InBuffer.cpp
     ${SZ}/CPP/7zip/Common/InOutTempBuffer.cpp
@@ -171,6 +171,7 @@ set(SZ_SOURCES
     ${SZ}/CPP/7zip/Common/MemBlocks.cpp
     ${SZ}/CPP/7zip/Common/MethodId.cpp
     ${SZ}/CPP/7zip/Common/MethodProps.cpp
+    ${SZ}/CPP/7zip/Common/MultiOutStream.cpp
     ${SZ}/CPP/7zip/Common/OffsetStream.cpp
     ${SZ}/CPP/7zip/Common/OutBuffer.cpp
     ${SZ}/CPP/7zip/Common/OutMemStream.cpp
@@ -194,7 +195,6 @@ set(SZ_SOURCES
     ${SZ}/CPP/7zip/Compress/BranchMisc.cpp
     ${SZ}/CPP/7zip/Compress/BranchRegister.cpp
     ${SZ}/CPP/7zip/Compress/ByteSwap.cpp
-    ${SZ}/CPP/7zip/Compress/CodecExports.cpp
     ${SZ}/CPP/7zip/Compress/CopyCoder.cpp
     ${SZ}/CPP/7zip/Compress/CopyRegister.cpp
     ${SZ}/CPP/7zip/Compress/Deflate64Register.cpp
@@ -247,10 +247,32 @@ set(SZ_SOURCES
     ${SZ}/CPP/7zip/Crypto/WzAes.cpp
     ${SZ}/CPP/7zip/Crypto/ZipCrypto.cpp
     ${SZ}/CPP/7zip/Crypto/ZipStrong.cpp
+    ${SZ}/CPP/7zip/UI/Common/ArchiveCommandLine.cpp
+    ${SZ}/CPP/7zip/UI/Common/ArchiveExtractCallback.cpp
+    ${SZ}/CPP/7zip/UI/Common/ArchiveOpenCallback.cpp
+    ${SZ}/CPP/7zip/UI/Common/Bench.cpp
+    ${SZ}/CPP/7zip/UI/Common/DefaultName.cpp
+    ${SZ}/CPP/7zip/UI/Common/EnumDirItems.cpp
+    ${SZ}/CPP/7zip/UI/Common/Extract.cpp
+    ${SZ}/CPP/7zip/UI/Common/ExtractingFilePath.cpp
+    ${SZ}/CPP/7zip/UI/Common/HashCalc.cpp
+    ${SZ}/CPP/7zip/UI/Common/LoadCodecs.cpp
+    ${SZ}/CPP/7zip/UI/Common/OpenArchive.cpp
+    ${SZ}/CPP/7zip/UI/Common/PropIDUtils.cpp
+    ${SZ}/CPP/7zip/UI/Common/SetProperties.cpp
+    ${SZ}/CPP/7zip/UI/Common/SortUtils.cpp
+    ${SZ}/CPP/7zip/UI/Common/TempFiles.cpp
+    ${SZ}/CPP/7zip/UI/Common/Update.cpp
+    ${SZ}/CPP/7zip/UI/Common/UpdateAction.cpp
+    ${SZ}/CPP/7zip/UI/Common/UpdateCallback.cpp
+    ${SZ}/CPP/7zip/UI/Common/UpdatePair.cpp
+    ${SZ}/CPP/7zip/UI/Common/UpdateProduce.cpp
     ${SZ}/CPP/Common/CRC.cpp
+    ${SZ}/CPP/Common/CommandLineParser.cpp
     ${SZ}/CPP/Common/CrcReg.cpp
     ${SZ}/CPP/Common/DynLimBuf.cpp
     ${SZ}/CPP/Common/IntToString.cpp
+    ${SZ}/CPP/Common/ListFileUtils.cpp
     ${SZ}/CPP/Common/LzFindPrepare.cpp
     ${SZ}/CPP/Common/Md5Reg.cpp
     ${SZ}/CPP/Common/MyMap.cpp
@@ -266,6 +288,8 @@ set(SZ_SOURCES
     ${SZ}/CPP/Common/Sha3Reg.cpp
     ${SZ}/CPP/Common/Sha512Prepare.cpp
     ${SZ}/CPP/Common/Sha512Reg.cpp
+    ${SZ}/CPP/Common/StdInStream.cpp
+    ${SZ}/CPP/Common/StdOutStream.cpp
     ${SZ}/CPP/Common/StringConvert.cpp
     ${SZ}/CPP/Common/StringToInt.cpp
     ${SZ}/CPP/Common/UTFConvert.cpp
@@ -273,14 +297,17 @@ set(SZ_SOURCES
     ${SZ}/CPP/Common/Xxh64Reg.cpp
     ${SZ}/CPP/Common/XzCrc64Init.cpp
     ${SZ}/CPP/Common/XzCrc64Reg.cpp
+    ${SZ}/CPP/Windows/ErrorMsg.cpp
     ${SZ}/CPP/Windows/FileDir.cpp
     ${SZ}/CPP/Windows/FileFind.cpp
     ${SZ}/CPP/Windows/FileIO.cpp
+    ${SZ}/CPP/Windows/FileLink.cpp
     ${SZ}/CPP/Windows/FileName.cpp
     ${SZ}/CPP/Windows/PropVariant.cpp
     ${SZ}/CPP/Windows/PropVariantConv.cpp
     ${SZ}/CPP/Windows/PropVariantUtils.cpp
     ${SZ}/CPP/Windows/Synchronization.cpp
     ${SZ}/CPP/Windows/System.cpp
+    ${SZ}/CPP/Windows/SystemInfo.cpp
     ${SZ}/CPP/Windows/TimeUtils.cpp
 )

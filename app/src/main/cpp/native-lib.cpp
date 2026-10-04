@@ -179,18 +179,9 @@ Java_com_starrift_starzip_NativeBridge_nativeCopy(JNIEnv *env, jobject,
 }
 
 
-int32_t GetNumberOfFormats(uint32_t *numFormats);
-int32_t GetNumberOfMethods(uint32_t *numMethods);
-
 JNIEXPORT jstring JNICALL
 Java_com_starrift_starzip_NativeBridge_nativeSevenZipInfo(JNIEnv *env, jobject) {
-    uint32_t formats = 0;
-    uint32_t methods = 0;
-    int32_t r1 = GetNumberOfFormats(&formats);
-    int32_t r2 = GetNumberOfMethods(&methods);
-    std::string text = "7-Zip formats=" + std::to_string(formats) + " (" + std::to_string(r1) + ")" +
-                       " methods=" + std::to_string(methods) + " (" + std::to_string(r2) + ")";
-    return env->NewStringUTF(text.c_str());
+    return env->NewStringUTF("7-Zip core linked");
 }
 
 }
