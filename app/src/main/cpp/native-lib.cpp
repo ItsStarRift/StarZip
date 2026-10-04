@@ -1,4 +1,6 @@
 #include <jni.h>
+#include "storage.h"
+#include <string>
 #include <android/log.h>
 #include <atomic>
 #include <chrono>
@@ -91,6 +93,88 @@ Java_com_starrift_starzip_NativeBridge_nativeSelfTest(JNIEnv *env, jobject,
         progress.report(done < total ? done : total, total, "selftest.bin");
     }
     progress.report(total, total, "selftest.bin", true);
+    return RES_OK;
+}
+
+
+JNIEXPORT jint JNICALL
+Java_com_starrift_starzip_NativeBridge_nativeCopy(JNIEnv *env, jobject,
+                                                  jstring inPath, jint inFd,
+                                                  jstring outPath, jint outFd,
+                                                  jint chunkMb, jobject callback) {
+    g_isCancelled.store(false);
+
+    ProgressReporter progress(env, callback);
+    if (!progress.valid()) return RES_ERROR;
+
+    if (chunkMb < 1) chunkMb = 1;
+    if (chunkMb > 16) chunkMb = 16;
+
+    NativeFile in;
+    NativeFile out;
+    std::string outPathStr;
+    bool opened;
+
+    if (inPath) {
+        const char *p = env->GetStringUTFChars(inPath, nullptr);
+        opened = p && in.openPath(p, false);
+        if (p) env->ReleaseStringUTFChars(inPath, p);
+    } else {
+        opened = in.openFd(inFd, false);
+    }
+    if (!opened) { LOGE("cannot open input"); return RES_ERROR; }
+
+    if (outPath) {
+        const char *p = env->GetStringUTFChars(outPath, nullptr);
+        if (p) outPathStr = p;
+        opened = p && out.openPath(p, true);
+        if (p) env->ReleaseStringUTFChars(outPath, p);
+    } else {
+        opened = out.openFd(outFd, true);
+    }
+    if (!opened) { LOGE("cannot open output"); return RES_ERROR; }
+
+    auto discardOutput = [&]() {
+        if (!outPathStr.empty()) {
+            out.close();
+            unlink(outPathStr.c_str());
+        } else {
+            if (out.fd() >= 0) (void) ftruncate(out.fd(), 0);
+            out.close();
+        }
+    };
+
+    const int64_t totalSigned = in.size();
+    const uint64_t total = totalSigned > 0 ? (uint64_t) totalSigned : 1;
+    std::vector<uint8_t> buf((size_t) chunkMb * 1024 * 1024);
+    uint64_t done = 0;
+
+    while (true) {
+        if (g_isCancelled.load()) {
+            discardOutput();
+            return RES_CANCELLED;
+        }
+        size_t n = in.read(buf.data(), buf.size());
+        if (n == 0) {
+            if (in.hasError()) {
+                discardOutput();
+                return RES_ERROR;
+            }
+            break;
+        }
+        if (out.write(buf.data(), n) != n) {
+            discardOutput();
+            return RES_ERROR;
+        }
+        done += n;
+        progress.report(done < total ? done : total, total, "copy");
+    }
+
+    if (!out.flush()) {
+        discardOutput();
+        return RES_ERROR;
+    }
+    progress.report(total, total, "copy", true);
     return RES_OK;
 }
 
