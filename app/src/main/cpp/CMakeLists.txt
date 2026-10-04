@@ -9,6 +9,9 @@ target_include_directories(sevenzip PRIVATE ${SZ}/C ${SZ}/CPP ${SZ}/CPP/7zip/Bun
 target_compile_definitions(sevenzip PRIVATE
     Z7_EXTERNAL_CODECS _REENTRANT _FILE_OFFSET_BITS=64 _LARGEFILE_SOURCE NDEBUG)
 target_compile_options(sevenzip PRIVATE -O2 -fPIC)
+if(ANDROID_ABI STREQUAL "arm64-v8a")
+    target_compile_options(sevenzip PRIVATE -march=armv8-a+crypto+crc)
+endif()
 target_link_libraries(sevenzip log)
 
 add_library(starzip_native SHARED native-lib.cpp storage.cpp)
