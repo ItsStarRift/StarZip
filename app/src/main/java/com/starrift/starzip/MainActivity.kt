@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        status = TextView(this).apply { text = NativeBridge.nativeVersion() }
+        status = TextView(this).apply { text = NativeBridge.nativeVersion() + "\n" + NativeBridge.nativeSevenZipInfo() }
         bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply { max = 100 }
         val start = Button(this).apply { text = "Start Test" }
         val copy = Button(this).apply { text = "Copy File" }

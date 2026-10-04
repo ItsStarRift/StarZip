@@ -12,6 +12,7 @@ object NativeBridge {
     init { System.loadLibrary("starzip_native") }
 
     external fun nativeVersion(): String
+    external fun nativeSevenZipInfo(): String
     external fun nativeCancelOperation()
     external fun nativeSelfTest(totalMb: Int, chunkMb: Int, callback: ProgressCallback): Int
     external fun nativeCopy(inPath: String?, inFd: Int, outPath: String?, outFd: Int, chunkMb: Int, callback: ProgressCallback): Int
