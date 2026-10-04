@@ -16,6 +16,7 @@ const UInt32 kSeekEnd = 2;
 
 const HRESULT kNegativeSeek = static_cast<HRESULT>(0x80070083u);
 const HRESULT kDiskFull = static_cast<HRESULT>(0x80070070u);
+const HRESULT kAccessDenied = static_cast<HRESULT>(0x80070005u);
 
 }
 
@@ -29,7 +30,7 @@ HRESULT HResultFromErrno(int err) {
         case EACCES:
         case EPERM:
         case EROFS:
-            return E_ACCESSDENIED;
+            return kAccessDenied;
         case ESPIPE:
             return E_NOTIMPL;
         case EINVAL:
