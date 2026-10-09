@@ -3,6 +3,7 @@ package com.starrift.starzip
 import android.net.Uri
 import android.os.Bundle
 import android.provider.DocumentsContract
+import android.provider.OpenableColumns
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -34,6 +35,10 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri -> if (uri != null) runCopy(uri) }
 
+    private val pickArchive = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) runOpen(uri) }
+
     private val pickSource = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -49,12 +54,13 @@ class MainActivity : AppCompatActivity() {
         bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply { max = 100 }
         val start = Button(this).apply { text = "Start Test" }
         val copy = Button(this).apply { text = "Copy File" }
+        val open = Button(this).apply { text = "Open Archive" }
         val cancel = Button(this).apply { text = "Cancel" }
 
         setContentView(LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 96, 48, 48)
-            addView(status); addView(bar); addView(start); addView(copy); addView(cancel)
+            addView(status); addView(bar); addView(start); addView(copy); addView(open); addView(cancel)
         })
 
         start.setOnClickListener {
@@ -68,6 +74,9 @@ class MainActivity : AppCompatActivity() {
         }
         copy.setOnClickListener {
             if (job?.isActive != true) pickSource.launch(arrayOf("*/*"))
+        }
+        open.setOnClickListener {
+            if (job?.isActive != true) pickArchive.launch(arrayOf("*/*"))
         }
         cancel.setOnClickListener { NativeBridge.nativeCancelOperation() }
     }
@@ -92,6 +101,29 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             showResult(code)
+        }
+    }
+
+    private fun runOpen(uri: Uri) {
+        job = lifecycleScope.launch {
+            val text = withContext(Dispatchers.IO) {
+                try {
+                    val name = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                        ?.use { if (it.moveToFirst()) it.getString(0) else null } ?: "archive"
+                    contentResolver.openFileDescriptor(uri, "r")!!.use { pfd ->
+                        val id = NativeBridge.nativeOpenArchive(pfd.fd, name)
+                        if (id <= 0) "Open failed, code " + (-id)
+                        else {
+                            val count = NativeBridge.nativeArchiveItemCount(id)
+                            NativeBridge.nativeCloseArchive(id)
+                            "Items: " + count
+                        }
+                    }
+                } catch (e: Exception) {
+                    "Error"
+                }
+            }
+            status.text = text
         }
     }
 

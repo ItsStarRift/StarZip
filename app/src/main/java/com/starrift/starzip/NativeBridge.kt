@@ -16,4 +16,8 @@ object NativeBridge {
     external fun nativeCancelOperation()
     external fun nativeSelfTest(totalMb: Int, chunkMb: Int, callback: ProgressCallback): Int
     external fun nativeCopy(inPath: String?, inFd: Int, outPath: String?, outFd: Int, chunkMb: Int, callback: ProgressCallback): Int
+    external fun nativeOpenArchive(fd: Int, displayName: String): Long
+    external fun nativeArchiveItemCount(id: Long): Long
+    external fun nativeCancelArchive(id: Long)
+    external fun nativeCloseArchive(id: Long)
 }
