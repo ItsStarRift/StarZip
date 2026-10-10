@@ -97,7 +97,7 @@ HRESULT ArchiveTree::build(IInArchive *archive, const CancelTokenPtr &token) {
                 NWindows::NCOM::CPropVariant prop;
                 res = archive->GetProperty(i, kpidIsDir, &prop);
                 if (res != S_OK) return res;
-                if (prop.vt == VT_BOOL) isDir = VARIANT_BOOLToBool(prop.boolVal);
+                if (prop.vt == VT_BOOL) isDir = (prop.boolVal != 0);
             }
             {
                 NWindows::NCOM::CPropVariant prop;
