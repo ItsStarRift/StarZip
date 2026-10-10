@@ -20,4 +20,6 @@ object NativeBridge {
     external fun nativeArchiveItemCount(id: Long): Long
     external fun nativeCancelArchive(id: Long)
     external fun nativeCloseArchive(id: Long)
+    external fun nativeDirCount(id: Long, node: Long): Long
+    external fun nativeGetItems(id: Long, node: Long, offset: Long, count: Int): Array<ArchiveEntry>?
 }

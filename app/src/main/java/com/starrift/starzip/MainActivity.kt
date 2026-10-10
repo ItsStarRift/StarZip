@@ -115,8 +115,11 @@ class MainActivity : AppCompatActivity() {
                         if (id <= 0) "Open failed, code " + (-id)
                         else {
                             val count = NativeBridge.nativeArchiveItemCount(id)
+                            val rootCount = NativeBridge.nativeDirCount(id, 0L)
+                            val first = NativeBridge.nativeGetItems(id, 0L, 0L, 8)
+                            val names = first?.joinToString("\n") { (if (it.isDir) "[D] " else "    ") + it.name + "  " + it.size } ?: "null"
                             NativeBridge.nativeCloseArchive(id)
-                            "Items: " + count
+                            "Items: " + count + "\nRoot: " + rootCount + "\n" + names
                         }
                     }
                 } catch (e: Exception) {

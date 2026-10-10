@@ -14,7 +14,7 @@ if(ANDROID_ABI STREQUAL "arm64-v8a")
 endif()
 target_link_libraries(sevenzip log)
 
-add_library(starzip_native SHARED native-lib.cpp storage.cpp fd_stream.cpp session.cpp open_ui.cpp archive_session.cpp jni_archive.cpp)
+add_library(starzip_native SHARED native-lib.cpp storage.cpp fd_stream.cpp session.cpp open_ui.cpp archive_session.cpp jni_archive.cpp archive_tree.cpp)
 target_include_directories(starzip_native PRIVATE ${SZ}/C ${SZ}/CPP)
 target_compile_definitions(starzip_native PRIVATE
     _REENTRANT _FILE_OFFSET_BITS=64 _LARGEFILE_SOURCE NDEBUG)

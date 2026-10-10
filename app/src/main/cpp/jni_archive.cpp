@@ -89,4 +89,85 @@ Java_com_starrift_starzip_NativeBridge_nativeCloseArchive(JNIEnv *, jobject, jlo
     }
 }
 
+
+JNIEXPORT jlong JNICALL
+Java_com_starrift_starzip_NativeBridge_nativeDirCount(JNIEnv *, jobject, jlong id, jlong node) {
+    try {
+        auto session = findSession(id);
+        if (!session) return -static_cast<jlong>(kResultError);
+        std::lock_guard<std::mutex> lock(session->mutex);
+        const ArchiveTree &tree = session->tree();
+        if (node < 0 || static_cast<uint64_t>(node) >= tree.nodeCount())
+            return -static_cast<jlong>(kResultError);
+        if (!tree.at(static_cast<uint32_t>(node)).isDir) return -static_cast<jlong>(kResultError);
+        return static_cast<jlong>(tree.childCount(static_cast<uint32_t>(node)));
+    } catch (...) {
+        return -static_cast<jlong>(kResultError);
+    }
+}
+
+JNIEXPORT jobjectArray JNICALL
+Java_com_starrift_starzip_NativeBridge_nativeGetItems(JNIEnv *env, jobject, jlong id, jlong node,
+                                                      jlong offset, jint count) {
+    try {
+        auto session = findSession(id);
+        if (!session) return nullptr;
+        std::lock_guard<std::mutex> lock(session->mutex);
+        const ArchiveTree &tree = session->tree();
+        if (node < 0 || static_cast<uint64_t>(node) >= tree.nodeCount()) return nullptr;
+        if (offset < 0 || count <= 0) return nullptr;
+        const uint32_t dir = static_cast<uint32_t>(node);
+        if (!tree.at(dir).isDir) return nullptr;
+        const uint64_t total = tree.childCount(dir);
+        if (static_cast<uint64_t>(offset) > total) return nullptr;
+        uint64_t take = static_cast<uint64_t>(count > 1000 ? 1000 : count);
+        if (take > total - static_cast<uint64_t>(offset)) take = total - static_cast<uint64_t>(offset);
+
+        jclass cls = env->FindClass("com/starrift/starzip/ArchiveEntry");
+        if (!cls) {
+            env->ExceptionClear();
+            return nullptr;
+        }
+        jmethodID ctor = env->GetMethodID(cls, "<init>", "(JJZLjava/lang/String;)V");
+        if (!ctor) {
+            env->ExceptionClear();
+            env->DeleteLocalRef(cls);
+            return nullptr;
+        }
+        jobjectArray result = env->NewObjectArray(static_cast<jsize>(take), cls, nullptr);
+        if (!result) {
+            env->ExceptionClear();
+            env->DeleteLocalRef(cls);
+            return nullptr;
+        }
+        for (uint64_t k = 0; k < take; ++k) {
+            const uint32_t child = tree.childId(dir, static_cast<uint32_t>(static_cast<uint64_t>(offset) + k));
+            const TreeNode &entry = tree.at(child);
+            const std::u16string name = tree.name(entry);
+            jstring text = env->NewString(reinterpret_cast<const jchar *>(name.data()),
+                                          static_cast<jsize>(name.size()));
+            if (!text) {
+                env->ExceptionClear();
+                env->DeleteLocalRef(cls);
+                return nullptr;
+            }
+            jobject item = env->NewObject(cls, ctor, static_cast<jlong>(child),
+                                          static_cast<jlong>(entry.size),
+                                          static_cast<jboolean>(entry.isDir ? JNI_TRUE : JNI_FALSE), text);
+            env->DeleteLocalRef(text);
+            if (!item) {
+                env->ExceptionClear();
+                env->DeleteLocalRef(cls);
+                return nullptr;
+            }
+            env->SetObjectArrayElement(result, static_cast<jsize>(k), item);
+            env->DeleteLocalRef(item);
+        }
+        env->DeleteLocalRef(cls);
+        return result;
+    } catch (...) {
+        return nullptr;
+    }
+}
+
 }

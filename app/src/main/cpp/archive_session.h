@@ -12,6 +12,7 @@
 #include "7zip/UI/Common/LoadCodecs.h"
 #include "7zip/UI/Common/OpenArchive.h"
 #include "7zip/UI/Common/Property.h"
+#include "archive_tree.h"
 #include "fd_stream.h"
 #include "open_ui.h"
 #include "session.h"
@@ -28,6 +29,7 @@ public:
 
     jint open(int fd, const std::u16string &name);
     HRESULT itemCount(uint32_t &count);
+    const ArchiveTree &tree() const { return tree_; }
     void cancel();
 
     std::mutex mutex;
@@ -44,5 +46,6 @@ private:
     CObjectVector<COpenType> types_;
     CIntVector excluded_;
     CArchiveLink link_;
+    ArchiveTree tree_;
     bool opened_ = false;
 };

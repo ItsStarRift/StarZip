@@ -63,6 +63,9 @@ jint ArchiveSession::open(int fd, const std::u16string &name) {
 
     HRESULT result = link_.Open_Strict(op, &ui_);
     if (result == S_OK && !link_.Arcs.IsEmpty()) {
+        HRESULT built = tree_.build(link_.GetArchive(), token_);
+        if (built == E_ABORT) return kResultCancelled;
+        if (built != S_OK) return kResultError;
         opened_ = true;
         return kResultOk;
     }
