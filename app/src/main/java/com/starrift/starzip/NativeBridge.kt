@@ -8,6 +8,9 @@ object NativeBridge {
     const val RES_OK = 0
     const val RES_CANCELLED = 1
     const val RES_ERROR = 2
+    const val RES_PASSWORD = 3
+    const val RES_NOT_ARCHIVE = 4
+    const val RES_DATA = 5
 
     init { System.loadLibrary("starzip_native") }
 
@@ -16,10 +19,11 @@ object NativeBridge {
     external fun nativeCancelOperation()
     external fun nativeSelfTest(totalMb: Int, chunkMb: Int, callback: ProgressCallback): Int
     external fun nativeCopy(inPath: String?, inFd: Int, outPath: String?, outFd: Int, chunkMb: Int, callback: ProgressCallback): Int
-    external fun nativeOpenArchive(fd: Int, displayName: String): Long
+    external fun nativeOpenArchive(fd: Int, displayName: String, password: CharArray?): Long
     external fun nativeArchiveItemCount(id: Long): Long
     external fun nativeCancelArchive(id: Long)
     external fun nativeCloseArchive(id: Long)
     external fun nativeDirCount(id: Long, node: Long): Long
     external fun nativeGetItems(id: Long, node: Long, offset: Long, count: Int): Array<ArchiveEntry>?
+    external fun nativeExtractItem(id: Long, node: Long, fd: Int, callback: ProgressCallback): Int
 }

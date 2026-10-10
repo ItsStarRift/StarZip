@@ -1,5 +1,6 @@
 #include <jni.h>
 
+#include <algorithm>
 #include <atomic>
 #include <map>
 #include <memory>
@@ -24,7 +25,7 @@ std::shared_ptr<ArchiveSession> findSession(jlong id) {
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_com_starrift_starzip_NativeBridge_nativeOpenArchive(JNIEnv *env, jobject, jint fd, jstring name) {
+Java_com_starrift_starzip_NativeBridge_nativeOpenArchive(JNIEnv *env, jobject, jint fd, jstring name, jcharArray password) {
     try {
         if (!name) return -static_cast<jlong>(kResultError);
         const jchar *chars = env->GetStringChars(name, nullptr);
@@ -34,6 +35,17 @@ Java_com_starrift_starzip_NativeBridge_nativeOpenArchive(JNIEnv *env, jobject, j
         env->ReleaseStringChars(name, chars);
 
         auto session = std::make_shared<ArchiveSession>();
+        if (password) {
+            const jsize length = env->GetArrayLength(password);
+            jchar *elements = env->GetCharArrayElements(password, nullptr);
+            if (elements) {
+                std::u16string secret(reinterpret_cast<const char16_t *>(elements),
+                                      static_cast<size_t>(length));
+                std::fill(elements, elements + length, static_cast<jchar>(0));
+                env->ReleaseCharArrayElements(password, elements, 0);
+                session->setPassword(std::move(secret));
+            }
+        }
         jint code;
         {
             std::lock_guard<std::mutex> lock(session->mutex);
@@ -167,6 +179,23 @@ Java_com_starrift_starzip_NativeBridge_nativeGetItems(JNIEnv *env, jobject, jlon
         return result;
     } catch (...) {
         return nullptr;
+    }
+}
+
+
+JNIEXPORT jint JNICALL
+Java_com_starrift_starzip_NativeBridge_nativeExtractItem(JNIEnv *env, jobject, jlong id, jlong node,
+                                                         jint fd, jobject callback) {
+    try {
+        auto session = findSession(id);
+        if (!session) return kResultError;
+        if (node <= 0 || node > 0x7FFFFFF0) return kResultError;
+        ProgressSink sink;
+        if (!sink.init(env, callback)) return kResultError;
+        std::lock_guard<std::mutex> lock(session->mutex);
+        return session->extract(static_cast<uint32_t>(node), fd, &sink);
+    } catch (...) {
+        return kResultError;
     }
 }
 

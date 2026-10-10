@@ -1,5 +1,7 @@
 #include "open_ui.h"
 
+#include "text_util.h"
+
 HRESULT OpenUi::Open_CheckBreak() {
     return cancelled() ? E_ABORT : S_OK;
 }
@@ -17,7 +19,12 @@ HRESULT OpenUi::Open_Finished() {
 }
 
 HRESULT OpenUi::Open_CryptoGetTextPassword(BSTR *password) {
-    if (password) *password = NULL;
-    passwordRequested = true;
-    return E_ABORT;
+    if (!password) return E_INVALIDARG;
+    *password = NULL;
+    if (cancelled()) return E_ABORT;
+    if (!password_ || password_->empty()) {
+        passwordRequested = true;
+        return E_ABORT;
+    }
+    return StringToBstr(ToUString(*password_), password);
 }

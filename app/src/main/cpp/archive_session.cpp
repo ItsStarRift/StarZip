@@ -1,32 +1,28 @@
 #include "archive_session.h"
 
-namespace {
+#include <algorithm>
 
-UString ToUString(const std::u16string &s) {
-    std::wstring wide;
-    wide.reserve(s.size());
-    for (size_t i = 0; i < s.size(); ++i) {
-        uint32_t cp = s[i];
-        if (cp >= 0xD800 && cp < 0xDC00 && i + 1 < s.size() &&
-            s[i + 1] >= 0xDC00 && s[i + 1] < 0xE000) {
-            cp = 0x10000 + ((cp - 0xD800) << 10) + (static_cast<uint32_t>(s[i + 1]) - 0xDC00);
-            ++i;
-        }
-        wide.push_back(static_cast<wchar_t>(cp));
-    }
-    return UString(wide.c_str());
-}
-
-}
+#include "extract_callback.h"
+#include "text_util.h"
 
 ArchiveSession::ArchiveSession()
-    : token_(std::make_shared<CancelToken>()), ui_(token_) {}
+    : token_(std::make_shared<CancelToken>()), ui_(token_, &password_) {}
 
 ArchiveSession::~ArchiveSession() {
     try {
         shutdown();
     } catch (...) {
     }
+}
+
+void ArchiveSession::wipePassword() {
+    std::fill(password_.begin(), password_.end(), u'\0');
+    password_.clear();
+}
+
+void ArchiveSession::setPassword(std::u16string password) {
+    wipePassword();
+    password_ = std::move(password);
 }
 
 void ArchiveSession::shutdown() {
@@ -36,6 +32,7 @@ void ArchiveSession::shutdown() {
     codecsRef_.Release();
     codecs_ = nullptr;
     opened_ = false;
+    wipePassword();
 }
 
 void ArchiveSession::cancel() {
@@ -72,6 +69,25 @@ jint ArchiveSession::open(int fd, const std::u16string &name) {
     if (result == E_ABORT) return ui_.passwordRequested ? kResultPassword : kResultCancelled;
     if (result == S_FALSE || result == S_OK) return kResultNotArchive;
     return kResultError;
+}
+
+jint ArchiveSession::extract(uint32_t node, int fd, ProgressSink *sink) {
+    if (!opened_ || link_.Arcs.IsEmpty()) return kResultError;
+    if (node == 0 || node >= tree_.nodeCount()) return kResultError;
+    const TreeNode &entry = tree_.at(node);
+    if (entry.isDir || entry.itemIndex < 0) return kResultError;
+
+    token_->flag.store(false);
+    ExtractCallback *spec = new ExtractCallback(fd, token_, sink, &password_, tree_.name(entry));
+    CMyComPtr<IArchiveExtractCallback> callback(spec);
+    const UInt32 index = static_cast<UInt32>(entry.itemIndex);
+    HRESULT result = link_.GetArchive()->Extract(&index, 1, 0, callback);
+    if (result == E_ABORT) return spec->passwordRequested ? kResultPassword : kResultCancelled;
+    if (result != S_OK || spec->streamError != S_OK) return kResultError;
+    if (!spec->resultSeen || spec->operationResult != NArchive::NExtract::NOperationResult::kOK)
+        return kResultDataError;
+    if (sink) sink->report(1, 1, tree_.name(entry), true);
+    return kResultOk;
 }
 
 HRESULT ArchiveSession::itemCount(uint32_t &count) {

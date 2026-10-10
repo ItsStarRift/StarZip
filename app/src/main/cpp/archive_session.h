@@ -19,6 +19,7 @@
 
 constexpr jint kResultPassword = 3;
 constexpr jint kResultNotArchive = 4;
+constexpr jint kResultDataError = 5;
 
 class ArchiveSession {
 public:
@@ -27,7 +28,9 @@ public:
     ArchiveSession(const ArchiveSession &) = delete;
     ArchiveSession &operator=(const ArchiveSession &) = delete;
 
+    void setPassword(std::u16string password);
     jint open(int fd, const std::u16string &name);
+    jint extract(uint32_t node, int fd, ProgressSink *sink);
     HRESULT itemCount(uint32_t &count);
     const ArchiveTree &tree() const { return tree_; }
     void cancel();
@@ -36,8 +39,10 @@ public:
 
 private:
     void shutdown();
+    void wipePassword();
 
     CancelTokenPtr token_;
+    std::u16string password_;
     CMyComPtr<IUnknown> codecsRef_;
     CCodecs *codecs_ = nullptr;
     CMyComPtr<IInStream> stream_;

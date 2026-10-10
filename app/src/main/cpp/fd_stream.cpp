@@ -2,6 +2,8 @@
 #include "Common/MyWindows.h"
 #include "Common/MyInitGuid.h"
 #include "fd_stream.h"
+#include "7zip/IPassword.h"
+#include "7zip/Archive/IArchive.h"
 
 #include <cerrno>
 #include <fcntl.h>
