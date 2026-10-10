@@ -228,6 +228,34 @@ class MainActivity : AppCompatActivity() {
         bar.progress = 0
     }
 
+    private fun discardTarget(target: Uri) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                runCatching { DocumentsContract.deleteDocument(contentResolver, target) }
+            }
+        }
+    }
+
+    private fun askExtractPassword(target: Uri) {
+        val edit = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Password required or wrong")
+            .setView(edit)
+            .setPositiveButton("OK") { _, _ ->
+                val chars = CharArray(edit.text.length)
+                edit.text.getChars(0, chars.size, chars, 0)
+                edit.text.clear()
+                NativeBridge.nativeSetPassword(sessionId, chars)
+                chars.fill('\u0000')
+                runExtract(target)
+            }
+            .setNegativeButton("Cancel") { _, _ -> discardTarget(target) }
+            .setOnCancelListener { discardTarget(target) }
+            .show()
+    }
+
     private fun runExtract(target: Uri) {
         val entry = pendingEntry ?: return
         val id = sessionId
@@ -242,13 +270,12 @@ class MainActivity : AppCompatActivity() {
                     NativeBridge.RES_ERROR
                 }
             }
-            if (code != NativeBridge.RES_OK) {
-                withContext(Dispatchers.IO) {
-                    runCatching { DocumentsContract.deleteDocument(contentResolver, target) }
-                }
-            }
             status.text = describe(code)
-            if (code == NativeBridge.RES_PASSWORD) archiveUri?.let { askPassword(it) }
+            if (code == NativeBridge.RES_PASSWORD || code == NativeBridge.RES_DATA) {
+                askExtractPassword(target)
+            } else if (code != NativeBridge.RES_OK) {
+                discardTarget(target)
+            }
         }
     }
 

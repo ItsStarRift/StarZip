@@ -26,4 +26,5 @@ object NativeBridge {
     external fun nativeDirCount(id: Long, node: Long): Long
     external fun nativeGetItems(id: Long, node: Long, offset: Long, count: Int): Array<ArchiveEntry>?
     external fun nativeExtractItem(id: Long, node: Long, fd: Int, callback: ProgressCallback): Int
+    external fun nativeSetPassword(id: Long, password: CharArray?)
 }

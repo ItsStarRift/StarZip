@@ -199,4 +199,27 @@ Java_com_starrift_starzip_NativeBridge_nativeExtractItem(JNIEnv *env, jobject, j
     }
 }
 
+
+JNIEXPORT void JNICALL
+Java_com_starrift_starzip_NativeBridge_nativeSetPassword(JNIEnv *env, jobject, jlong id,
+                                                         jcharArray password) {
+    try {
+        auto session = findSession(id);
+        if (!session) return;
+        std::u16string secret;
+        if (password) {
+            const jsize length = env->GetArrayLength(password);
+            jchar *elements = env->GetCharArrayElements(password, nullptr);
+            if (elements) {
+                secret.assign(reinterpret_cast<const char16_t *>(elements), static_cast<size_t>(length));
+                std::fill(elements, elements + length, static_cast<jchar>(0));
+                env->ReleaseCharArrayElements(password, elements, 0);
+            }
+        }
+        std::lock_guard<std::mutex> lock(session->mutex);
+        session->setPassword(std::move(secret));
+    } catch (...) {
+    }
+}
+
 }
