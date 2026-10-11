@@ -24,8 +24,10 @@ class ExplorerViewModel : ViewModel() {
     private val pageSize = 200
     private val pages = HashMap<Int, Array<FileEntry>>()
     private var generation = 0
+    private var rootPath = ""
 
     fun open(path: String) {
+        if (rootPath.isEmpty()) rootPath = path
         val ticket = ++generation
         viewModelScope.launch {
             val handle = withContext(Dispatchers.IO) { NativeBridge.nativeListDir(path) }
@@ -48,7 +50,7 @@ class ExplorerViewModel : ViewModel() {
 
     fun goUp(): Boolean {
         val current = mutableState.value.path
-        if (current.isEmpty() || current == "/") return false
+        if (current.isEmpty() || current == "/" || current == rootPath) return false
         val parent = File(current).parent ?: return false
         open(parent)
         return true
