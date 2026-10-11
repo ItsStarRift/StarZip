@@ -92,6 +92,7 @@ class MainActivity : AppCompatActivity() {
             adapter = this@MainActivity.adapter
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
         }
+        val explorer = Button(this).apply { text = "Explorer" }
         val open = Button(this).apply { text = "Open Archive" }
         val up = Button(this).apply { text = "Up" }
         val cancel = Button(this).apply { text = "Cancel" }
@@ -102,10 +103,11 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 96, 48, 48)
             addView(status); addView(bar)
-            addView(open); addView(up); addView(cancel); addView(start); addView(copy)
+            addView(explorer); addView(open); addView(up); addView(cancel); addView(start); addView(copy)
             addView(list)
         })
 
+        explorer.setOnClickListener { startActivity(Intent(this, ExplorerActivity::class.java)) }
         open.setOnClickListener {
             if (job?.isActive != true) pickArchive.launch(arrayOf("*/*"))
         }
