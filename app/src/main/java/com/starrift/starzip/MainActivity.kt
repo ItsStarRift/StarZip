@@ -1,7 +1,15 @@
 package com.starrift.starzip
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.os.storage.StorageManager
+import android.os.storage.StorageVolume
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.text.InputType
@@ -14,8 +22,10 @@ import android.widget.ListView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,9 +38,11 @@ class MainActivity : AppCompatActivity() {
     private var archiveUri: Uri? = null
     private var archiveName = "archive"
     private var sessionId = 0L
+    private var diskRemoved = false
     private val nodeStack = ArrayList<Long>()
     private var entries: List<ArchiveEntry> = emptyList()
     private var pendingEntry: ArchiveEntry? = null
+    private var volumeCallback: Any? = null
     private lateinit var status: TextView
     private lateinit var bar: ProgressBar
     private lateinit var adapter: ArrayAdapter<String>
@@ -41,6 +53,12 @@ class MainActivity : AppCompatActivity() {
                 bar.progress = percentage
                 status.text = "%$percentage  $currentFileName"
             }
+        }
+    }
+
+    private val diskReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            handleDiskRemoved()
         }
     }
 
@@ -124,11 +142,66 @@ class MainActivity : AppCompatActivity() {
                 pickExtractTarget.launch(safeName(entry.name))
             }
         }
+
+        registerDiskWatch()
     }
 
     override fun onDestroy() {
+        unregisterDiskWatch()
         closeCurrent()
         super.onDestroy()
+    }
+
+    private fun registerDiskWatch() {
+        val filter = IntentFilter(Intent.ACTION_MEDIA_EJECT).apply {
+            addAction(Intent.ACTION_MEDIA_BAD_REMOVAL)
+            addAction(Intent.ACTION_MEDIA_UNMOUNTED)
+            addAction(Intent.ACTION_MEDIA_REMOVED)
+            addDataScheme("file")
+        }
+        ContextCompat.registerReceiver(this, diskReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= 30) registerVolumeWatch()
+    }
+
+    private fun unregisterDiskWatch() {
+        runCatching { unregisterReceiver(diskReceiver) }
+        if (Build.VERSION.SDK_INT >= 30) unregisterVolumeWatch()
+    }
+
+    @RequiresApi(30)
+    private fun registerVolumeWatch() {
+        val manager = getSystemService(StorageManager::class.java) ?: return
+        val watcher = object : StorageManager.StorageVolumeCallback() {
+            override fun onStateChanged(volume: StorageVolume) {
+                val state = volume.state
+                if (state != Environment.MEDIA_MOUNTED && state != Environment.MEDIA_MOUNTED_READ_ONLY) {
+                    handleDiskRemoved()
+                }
+            }
+        }
+        volumeCallback = watcher
+        manager.registerStorageVolumeCallback(ContextCompat.getMainExecutor(this), watcher)
+    }
+
+    @RequiresApi(30)
+    private fun unregisterVolumeWatch() {
+        val watcher = volumeCallback as? StorageManager.StorageVolumeCallback ?: return
+        val manager = getSystemService(StorageManager::class.java) ?: return
+        runCatching { manager.unregisterStorageVolumeCallback(watcher) }
+        volumeCallback = null
+    }
+
+    private fun handleDiskRemoved() {
+        val id = sessionId
+        if (id == 0L) return
+        diskRemoved = true
+        NativeBridge.nativeCancelArchive(id)
+        closeCurrent()
+        entries = emptyList()
+        nodeStack.clear()
+        adapter.clear()
+        bar.progress = 0
+        status.text = "Disk removed"
     }
 
     private fun safeName(name: String): String {
@@ -161,7 +234,7 @@ class MainActivity : AppCompatActivity() {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
         AlertDialog.Builder(this)
-            .setTitle("Password required")
+            .setTitle("Password required or wrong")
             .setView(edit)
             .setPositiveButton("OK") { _, _ ->
                 val chars = CharArray(edit.text.length)
@@ -178,6 +251,7 @@ class MainActivity : AppCompatActivity() {
             password?.fill('\u0000')
             return
         }
+        val hadPassword = password != null
         job = lifecycleScope.launch {
             val id = withContext(Dispatchers.IO) {
                 try {
@@ -193,12 +267,13 @@ class MainActivity : AppCompatActivity() {
             password?.fill('\u0000')
             if (id > 0L) {
                 closeCurrent()
+                diskRemoved = false
                 sessionId = id
                 archiveUri = uri
                 nodeStack.clear()
                 nodeStack.add(0L)
                 showDir()
-            } else if (id == -3L) {
+            } else if (id == -3L || (hadPassword && id == -4L)) {
                 askPassword(uri)
             } else {
                 status.text = "Open failed, code " + (-id)
@@ -208,6 +283,7 @@ class MainActivity : AppCompatActivity() {
 
     private suspend fun showDir() {
         val id = sessionId
+        if (id == 0L || nodeStack.isEmpty()) return
         val node = nodeStack.last()
         val loaded = withContext(Dispatchers.IO) {
             val result = ArrayList<ArchiveEntry>()
@@ -221,6 +297,7 @@ class MainActivity : AppCompatActivity() {
             }
             result
         }
+        if (id != sessionId) return
         entries = loaded
         adapter.clear()
         adapter.addAll(loaded.map { if (it.isDir) "[D] " + it.name else it.name + "  " + it.size })
@@ -247,7 +324,7 @@ class MainActivity : AppCompatActivity() {
                 val chars = CharArray(edit.text.length)
                 edit.text.getChars(0, chars.size, chars, 0)
                 edit.text.clear()
-                NativeBridge.nativeSetPassword(sessionId, chars)
+                if (sessionId != 0L) NativeBridge.nativeSetPassword(sessionId, chars)
                 chars.fill('\u0000')
                 runExtract(target)
             }
@@ -259,7 +336,10 @@ class MainActivity : AppCompatActivity() {
     private fun runExtract(target: Uri) {
         val entry = pendingEntry ?: return
         val id = sessionId
-        if (id == 0L || job?.isActive == true) return
+        if (id == 0L || job?.isActive == true) {
+            discardTarget(target)
+            return
+        }
         job = lifecycleScope.launch {
             val code = withContext(Dispatchers.IO) {
                 try {
@@ -269,6 +349,11 @@ class MainActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     NativeBridge.RES_ERROR
                 }
+            }
+            if (diskRemoved) {
+                status.text = "Disk removed"
+                discardTarget(target)
+                return@launch
             }
             status.text = describe(code)
             if (code == NativeBridge.RES_PASSWORD || code == NativeBridge.RES_DATA) {
